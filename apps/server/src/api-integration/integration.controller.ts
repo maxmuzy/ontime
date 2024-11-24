@@ -264,9 +264,9 @@ const actionHandlers: Record<string, ActionHandler> = {
     return { payload: factor };
   },
   'set-speed': (payload) => {
-    // TODO: validate payload type
-    const factor = runtimeService.setSpeed(payload as number);
-    return { payload: factor };
+    const speedToSet = numberOrError(payload);
+    const speedSet = runtimeService.setSpeed(speedToSet);
+    return { payload: speedSet };
   },
   'reset-speed': () => {
     const factor = runtimeService.resetSpeed();
