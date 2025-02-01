@@ -38,7 +38,7 @@ export type AutomationFilter = {
   value: string; // we use string but would coerce to the field value
 };
 
-export type AutomationOutput = OSCOutput | HTTPOutput;
+export type AutomationOutput = OSCOutput | HTTPOutput | TCPOutput;
 
 export type OSCOutput = {
   type: 'osc';
@@ -51,4 +51,11 @@ export type OSCOutput = {
 export type HTTPOutput = {
   type: 'http';
   url: string;
+};
+
+export type TCPOutput = {
+  type: 'tcp';
+  targetIP: string;
+  targetPort: number;
+  args: string;
 };

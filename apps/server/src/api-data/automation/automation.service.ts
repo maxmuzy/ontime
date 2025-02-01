@@ -1,6 +1,7 @@
 import {
   isHTTPOutput,
   isOSCOutput,
+  isTCPOutput,
   type AutomationFilter,
   type AutomationOutput,
   type FilterRule,
@@ -13,6 +14,7 @@ import { isOntimeCloud } from '../../externals.js';
 
 import { emitOSC } from './clients/osc.client.js';
 import { emitHTTP } from './clients/http.client.js';
+import { emitTCP } from './clients/tcp.client.js';
 import { getAutomationsEnabled, getAutomations, getAutomationTriggers } from './automation.dao.js';
 import { isBooleanEquals, isGreaterThan, isLessThan } from './automation.utils.js';
 
@@ -118,11 +120,11 @@ function send(output: AutomationOutput[], state?: RuntimeState) {
   const stateSnapshot = state ?? getState();
   output.forEach((payload) => {
     if (isOSCOutput(payload)) {
-      if (!isOntimeCloud) {
-        emitOSC(payload, stateSnapshot);
-      }
+      emitOSC(payload, stateSnapshot);
     } else if (isHTTPOutput(payload)) {
       emitHTTP(payload, stateSnapshot);
+    } else if (isTCPOutput(payload)) { // Adicione esta verificação
+      emitTCP(payload, stateSnapshot);
     }
   });
 }

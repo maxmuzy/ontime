@@ -27,6 +27,7 @@ export type {
   HTTPOutput,
   NormalisedAutomation,
   OSCOutput,
+  TCPOutput,
   Trigger,
   TriggerDTO,
 } from './definitions/core/Automation.type.js';
@@ -104,5 +105,6 @@ export {
   isKeyOfType,
   isOSCOutput,
   isHTTPOutput,
+  isTCPOutput,
 } from './utils/guards.js';
 export type { MaybeNumber, MaybeString } from './utils/utils.type.js';
