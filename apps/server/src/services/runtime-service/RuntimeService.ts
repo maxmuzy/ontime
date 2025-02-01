@@ -73,7 +73,8 @@ class RuntimeService {
   @broadcastResult
   private checkTimerUpdate({ hasTimerFinished, hasSecondaryTimerFinished }: runtimeState.UpdateResult) {
     const newState = runtimeState.getState();
-    // 1. find if we need to dispatch integrations related to the phase
+  
+    // 1. Dispara automações relacionadas à mudança de fase
     const timerPhaseChanged = RuntimeService.previousState.timer?.phase !== newState.timer.phase;
     if (timerPhaseChanged) {
       if (newState.timer.phase === TimerPhase.Warning) {
@@ -86,75 +87,68 @@ class RuntimeService {
         });
       }
     }
-
-    // 2. handle edge cases related to roll
+  
+    // 2. Tratamento do modo de reprodução "Roll"
     if (newState.timer.playback === Playback.Roll) {
-      // check if we need to call any side effects
       const keepOffset = newState.runtime.offset;
       if (hasSecondaryTimerFinished) {
-        // if the secondary timer has finished, we need to call roll
-        // since event is already loaded
+        // Apenas refaz a rolagem se o timer secundário terminou
         this.rollLoaded(keepOffset);
       } else if (hasTimerFinished) {
-        // if the timer has finished, we need to load next and keep rolling
+        // Encadeia o disparo do onFinish e a transição para o próximo clipe
         process.nextTick(() => {
+          // Primeiro dispara onFinish
           triggerAutomations(TimerLifeCycle.onFinish, newState);
+          // Em seguida, carrega o próximo clipe e continua a rolagem
+          this.handleLoadNext();
+          this.rollLoaded(keepOffset);
         });
-        this.handleLoadNext();
-        this.rollLoaded(keepOffset);
       } else if (
-        // if there is no previous clock, we could not have skipped
         RuntimeService.previousState?.clock &&
         skippedOutOfEvent(newState, RuntimeService.previousState.clock, timerConfig.skipLimit)
       ) {
-        // if we have skipped out of the event, we will recall roll
-        // to push the playback to the right place
-        // this comes with the caveat that we will lose our runtime data
         logger.warning(LogOrigin.Playback, 'Time skip detected, reloading roll');
         this.roll(true);
       }
     }
-
-    // 3. find if we need to process actions related to the timer finishing
+  
+    // 3. Tratamento do modo de reprodução "Play" quando o timer termina
     if (newState.timer.playback === Playback.Play && hasTimerFinished) {
       process.nextTick(() => {
+        // Primeiro dispara o onFinish
         triggerAutomations(TimerLifeCycle.onFinish, newState);
-      });
-
-      // handle end action if there was a timer playing
-      // actions are added to the queue stack to ensure that the order of operations is maintained
-      if (newState.eventNow) {
-        if (newState.eventNow.endAction === EndAction.Stop) {
-          setTimeout(this.stop.bind(this), 0);
-        } else if (newState.eventNow.endAction === EndAction.LoadNext) {
-          setTimeout(this.loadNext.bind(this), 0);
-        } else if (newState.eventNow.endAction === EndAction.PlayNext) {
-          setTimeout(this.startNext.bind(this), 0);
+        // Em seguida, processa a ação de finalização do evento
+        if (newState.eventNow) {
+          if (newState.eventNow.endAction === EndAction.Stop) {
+            setTimeout(this.stop.bind(this), 0);
+          } else if (newState.eventNow.endAction === EndAction.LoadNext) {
+            setTimeout(this.loadNext.bind(this), 0);
+          } else if (newState.eventNow.endAction === EndAction.PlayNext) {
+            setTimeout(this.startNext.bind(this), 0);
+          }
         }
-      }
+      });
     }
-
-    // 4. find if we need to update the timer
+  
+    // 4. Atualização do timer (onUpdate)
     const shouldUpdateTimer = getShouldTimerUpdate(this.lastIntegrationTimerValue, newState.timer.current);
     if (shouldUpdateTimer) {
       process.nextTick(() => {
         triggerAutomations(TimerLifeCycle.onUpdate, newState);
       });
-
       this.lastIntegrationTimerValue = newState.timer.current ?? -1;
     }
-
-    // 5. find if we need to update the clock
+  
+    // 5. Atualização do clock (onClock)
     const shouldUpdateClock = getShouldClockUpdate(this.lastIntegrationClockUpdate, newState.clock);
     if (shouldUpdateClock) {
       process.nextTick(() => {
         triggerAutomations(TimerLifeCycle.onClock, newState);
       });
-
       this.lastIntegrationClockUpdate = newState.clock;
     }
   }
-
+  
   /** delay initialisation until we have a restore point */
   public init(resumable: RestorePoint | null) {
     logger.info(LogOrigin.Server, 'Runtime service started');
