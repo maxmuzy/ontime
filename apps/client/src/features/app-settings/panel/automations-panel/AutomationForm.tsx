@@ -13,7 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { IoAdd } from '@react-icons/all-files/io5/IoAdd';
 import { IoTrash } from '@react-icons/all-files/io5/IoTrash';
-import { Automation, AutomationDTO, HTTPOutput, isHTTPOutput, isOSCOutput, OSCOutput } from 'ontime-types';
+import { Automation, AutomationDTO, HTTPOutput, isHTTPOutput, isOSCOutput, OSCOutput, TCPOutput, isTCPOutput} from 'ontime-types';
 
 import { addAutomation, editAutomation, testOutput } from '../../../../common/api/automation';
 import { maybeAxiosError } from '../../../../common/api/utils';
@@ -100,6 +100,11 @@ export default function AutomationForm(props: AutomationFormProps) {
     appendOutput({ type: 'http', url: '' });
   };
 
+  const handleAddNewTCPOutput = () => {
+    // @ts-expect-error -- we dont want to pass a port to the new object
+    appendOutput({ type: 'tcp', targetIP: '', targetPort: undefined, args: '' });
+  };
+
   const handleTestOSCOutput = async (index: number) => {
     try {
       const values = getValues(`outputs.${index}`) as OSCOutput;
@@ -127,6 +132,23 @@ export default function AutomationForm(props: AutomationFormProps) {
       await testOutput({
         type: 'http',
         url: values.url,
+      });
+    } catch (_error) {
+      /** we dont handle errors here, users should use the network tab */
+    }
+  };
+
+  const handleTestTCPOutput = async (index: number) => {
+    try {
+      const values = getValues(`outputs.${index}`) as TCPOutput;
+      if (!values.targetIP || !values.targetPort || !values.args) {
+        return;
+      }
+      await testOutput({
+        type: 'tcp',
+        targetIP: values.targetIP,
+        targetPort: values.targetPort,
+        args: values.args,
       });
     } catch (_error) {
       /** we dont handle errors here, users should use the network tab */
@@ -437,6 +459,83 @@ export default function AutomationForm(props: AutomationFormProps) {
               </div>
             );
           }
+          if (isTCPOutput(output)) {
+            const rowErrors = errors.outputs?.[index] as
+              | {
+                  targetIP?: { message?: string };
+                  targetPort?: { message?: string };
+                  args?: { message?: string };
+                }
+              | undefined;
+
+            return (
+              <div key={output.id} className={style.outputCard}>
+                <Tag>TCP</Tag>
+                <div className={style.tcpSection}>
+                  <label>
+                    Target IP
+                    <Input
+                      {...register(`outputs.${index}.targetIP`, {
+                        required: { value: true, message: 'Required field' },
+                      })}
+                      variant='ontime-filled'
+                      size='sm'
+                      placeholder='127.0.0.1'
+                      autoComplete='off'
+                    />
+                    <Panel.Error>{rowErrors?.targetIP?.message}</Panel.Error>
+                  </label>
+                  <label>
+                    Target Port
+                    <Input
+                      {...register(`outputs.${index}.targetPort`, {
+                        required: { value: true, message: 'Required field' },
+                        setValueAs: (value) => (value === '' ? 0 : Number(value)),
+                        max: { value: 65535, message: 'Port must be within range 1024 - 65535' },
+                        min: { value: 1024, message: 'Port must be within range 1024 - 65535' },
+                      })}
+                      variant='ontime-filled'
+                      size='sm'
+                      type='number'
+                      maxLength={5}
+                      placeholder='6250'
+                      autoComplete='off'
+                    />
+                    <Panel.Error>{rowErrors?.targetPort?.message}</Panel.Error>
+                  </label>
+                  <label>
+                    Parameters
+                    <Input
+                      {...register(`outputs.${index}.args`)}
+                      variant='ontime-filled'
+                      size='sm'
+                      placeholder='PLAY 1-10'
+                      autoComplete='off'
+                    />
+                    <Panel.Error>{rowErrors?.args?.message}</Panel.Error>
+                  </label>
+                  <div>
+                    <span>&nbsp;</span>
+                    <Panel.InlineElements relation='inner'>
+                      <Button size='sm' variant='ontime-ghosted-white' onClick={() => handleTestTCPOutput(index)}>
+                        Test
+                      </Button>
+                      <IconButton
+                        aria-label='Delete'
+                        icon={<IoTrash />}
+                        variant='ontime-ghosted'
+                        size='sm'
+                        onClick={() => removeOutput(index)}
+                        color='#FA5656' // $red-500
+                        isDisabled={false}
+                        isLoading={false}
+                      />
+                    </Panel.InlineElements>
+                  </div>
+                </div>
+              </div>
+            );
+          }
           // there should be no other output types
           return null;
         })}
@@ -460,6 +559,16 @@ export default function AutomationForm(props: AutomationFormProps) {
             isLoading={false}
           >
             HTTP
+          </Button>
+          <Button
+            variant='ontime-subtle'
+            rightIcon={<IoAdd />}
+            size='sm'
+            onClick={handleAddNewTCPOutput}
+            isDisabled={false}
+            isLoading={false}
+          >
+            TCP
           </Button>
         </Panel.InlineElements>
       </div>

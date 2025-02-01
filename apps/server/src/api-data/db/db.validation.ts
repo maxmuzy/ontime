@@ -65,6 +65,7 @@ export const validatePatchProject = [
   body('customFields').isObject().optional({ nullable: false }),
   body('osc').isObject().optional({ nullable: false }),
   body('http').isObject().optional({ nullable: false }),
+  body('tcp').isObject().optional({ nullable: false }),
 
   (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);

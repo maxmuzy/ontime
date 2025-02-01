@@ -40,7 +40,7 @@ export function emitTCP(output: TCPOutput, state: RuntimeState) {
 function sendTCP(socket: net.Socket, output: TCPOutput, state: RuntimeState) {
   const parsedMessage = parseTemplate(output, state);
   logger.info(LogOrigin.Tx, `Sending TCP: ${parsedMessage}`);
-  socket.write(parsedMessage);
+  socket.write(`${parsedMessage}\r\n`);
 }
 
 /** Fecha conexões TCP */
@@ -55,5 +55,5 @@ export function closeAllTCPConnections() {
 /** Substitui variáveis de template na mensagem */
 function parseTemplate(output: TCPOutput, state: RuntimeState): string {
   const parsedArguments = output.args ? parseTemplateNested(output.args, state) : undefined;
-  return parsedArguments;
+  return parsedArguments ?? '';
 }

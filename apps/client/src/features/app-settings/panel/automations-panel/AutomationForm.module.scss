@@ -68,6 +68,10 @@
   grid-template-columns: 1fr auto;
 }
 
+.tcpSection {
+  grid-template-columns: 9rem 5rem 3fr 4fr auto;
+}
+
 .outputCard {
   border-left: 0.25rem solid $gray-1200;
   padding-left: 0.5rem;

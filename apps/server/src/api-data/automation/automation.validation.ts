@@ -4,6 +4,7 @@ import {
   AutomationOutput,
   HTTPOutput,
   OSCOutput,
+  TCPOutput,
   timerLifecycleValues,
 } from 'ontime-types';
 
@@ -140,6 +141,8 @@ function validateOutput(output: Array<unknown>): output is AutomationOutput[] {
       validateOSCOutput(payload);
     } else if (type === 'http') {
       validateHttpOutput(payload);
+    } else if (type === 'tcp') {
+      validateTcpOutput(payload);
     } else {
       throw new Error('Invalid automation');
     }
@@ -163,6 +166,17 @@ function validateHttpOutput(payload: object): payload is HTTPOutput {
   assert.hasKeys(payload, ['url']);
   const { url } = payload;
   assert.isString(url);
+  return true;
+}
+
+function validateTcpOutput(payload: object): payload is TCPOutput {
+  assert.hasKeys(payload, ['targetIP', 'targetPort', 'args']);
+  const { targetIP, targetPort, args } = payload;
+  assert.isString(targetIP);
+  assert.isNumber(targetPort);
+  if (typeof args !== 'string' && typeof args !== 'number') {
+    throw new Error('Invalid automation');
+  }
   return true;
 }
 
