@@ -1,12 +1,15 @@
 import {
   ErrorResponse,
   MessageResponse,
+  OntimeEvent,
   OntimeRundown,
   OntimeRundownEntry,
   RundownCached,
   RundownPaginated,
 } from 'ontime-types';
-import { getErrorMessage } from 'ontime-utils';
+import { getErrorMessage, isPlaybackActive } from 'ontime-utils';
+import { PlayableEvent, Playback } from 'ontime-types';
+import { getState, type RuntimeState } from '../../stores/runtimeState.js';
 
 import type { Request, Response } from 'express';
 
@@ -26,7 +29,78 @@ import {
   getNormalisedRundown,
   getPaginated,
   getRundown,
+  findNext,
+  findPrevious,
 } from '../../services/rundown-service/rundownUtils.js';
+import { makeRuntimeStateData } from '../../stores/__mocks__/runtimeState.mocks.js';
+
+
+/**
+ * Retorna o evento que está atualmente tocando (ou em pausa ou rolando)
+ * Se não houver nenhum evento ativo, retorna null.
+ */
+export function getPlayingEvent(): PlayableEvent | null {
+  const state = getState();
+
+  // Se houver um evento carregado e o estado de playback estiver ativo...
+  if (state.eventNow && isPlaybackActive(state.timer.playback)) {
+    return state.eventNow;
+  }
+
+  return null;
+}
+export async function rundownGetPlaying(_req: Request, res: Response<OntimeRundownEntry | ErrorResponse>) {
+  try {
+    const playingEvent = getPlayingEvent();
+    if (!playingEvent) {
+      res.status(404).json({ message: 'No playing event found' });
+      return;
+    }
+    res.status(200).json(playingEvent);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    res.status(500).json({ message });
+  }
+}
+
+export async function rundownGetNext(_req: Request, res: Response<PlayableEvent | ErrorResponse>) {
+  try {
+    const playingEvent = getPlayingEvent();
+    if (!playingEvent) {
+      res.status(404).json({ message: 'No playing event found' });
+      return;
+    }
+    const nextEvent = findNext(playingEvent.id);
+    if (!nextEvent) {
+      res.status(404).json({ message: 'No next event found' });
+      return;
+    }
+    res.status(200).json(nextEvent);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    res.status(500).json({ message });
+  }
+}
+
+export async function rundownGetBefore(_req: Request, res: Response<OntimeEvent | ErrorResponse>) {
+  try {
+    const playingEvent = getPlayingEvent();
+    if (!playingEvent) {
+      res.status(404).json({ message: 'No playing event found' });
+      return;
+    }
+    const previousEvent = findPrevious(playingEvent.id);
+    if (!previousEvent) {
+      res.status(404).json({ message: 'No previous event found' });
+      return;
+    }
+    res.status(200).json(previousEvent);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    res.status(500).json({ message });
+  }
+}
+
 
 export async function rundownGetAll(_req: Request, res: Response<OntimeRundown>) {
   const rundown = getRundown();
