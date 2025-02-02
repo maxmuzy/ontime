@@ -9,6 +9,7 @@ import SwatchSelect from '../../../../../common/components/input/colour-input/Sw
 import useCustomFields from '../../../../../common/hooks-query/useCustomFields';
 import { preventEscape } from '../../../../../common/utils/keyEvent';
 import * as Panel from '../../../panel-utils/PanelUtils';
+import RichTextEditor from './RichTextEditor';
 
 import style from '../FeatureSettings.module.scss';
 

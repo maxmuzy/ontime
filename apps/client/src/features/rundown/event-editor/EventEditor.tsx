@@ -14,6 +14,7 @@ import EventTextArea from './composite/EventTextArea';
 import EventEditorEmpty from './EventEditorEmpty';
 
 import style from './EventEditor.module.scss';
+import RichTextEditor from './composite/RichTextEditor';
 
 export type EventEditorSubmitActions = keyof OntimeEvent;
 
@@ -95,7 +96,7 @@ export default function EventEditor(props: EventEditorProps) {
           const labelText = customFields[fieldKey].label;
 
           return (
-            <EventTextArea
+            <RichTextEditor
               key={key}
               field={fieldName}
               label={labelText}
