@@ -7,7 +7,7 @@ import {
   RundownCached,
   RundownPaginated,
 } from 'ontime-types';
-import { getErrorMessage, isPlaybackActive } from 'ontime-utils';
+import { getErrorMessage, getNextEvent, isPlaybackActive } from 'ontime-utils';
 import { PlayableEvent, Playback } from 'ontime-types';
 import { getState, type RuntimeState } from '../../stores/runtimeState.js';
 
@@ -56,6 +56,7 @@ export async function rundownGetPlaying(_req: Request, res: Response<OntimeRundo
       res.status(404).json({ message: 'No playing event found' });
       return;
     }
+    playingEvent.custom
     res.status(200).json(playingEvent);
   } catch (error) {
     const message = getErrorMessage(error);
@@ -82,7 +83,7 @@ export async function rundownGetNext(_req: Request, res: Response<PlayableEvent 
   }
 }
 
-export async function rundownGetBefore(_req: Request, res: Response<OntimeEvent | ErrorResponse>) {
+export async function rundownGetPrevious(_req: Request, res: Response<OntimeEvent | ErrorResponse>) {
   try {
     const playingEvent = getPlayingEvent();
     if (!playingEvent) {
@@ -101,6 +102,153 @@ export async function rundownGetBefore(_req: Request, res: Response<OntimeEvent 
   }
 }
 
+/**
+ * Endpoint para retornar o conteúdo de um campo customizado para o evento em execução.
+ * Rota: GET /playing/custom-data/:customField
+ */
+export async function getPlayingCustomField(req: Request, res: Response): Promise<void> {
+  try {
+    const { customField } = req.params;
+
+    // Obtém o evento atualmente em execução (eventNow)
+    const playingEvent = getPlayingEvent();
+    if (!playingEvent) {
+      res.status(404).json({ message: 'No playing event found' });
+      return;
+    }
+
+    // Verifica se o evento possui dados customizados
+    const customData = playingEvent.custom;
+    if (!customData || !(customField in customData)) {
+      res.status(404).json({
+        message: `Custom field "${customField}" not found`,
+      });
+      return;
+    }
+
+    // Retorna somente o conteúdo do campo customizado
+    res.json({ value: customData[customField] });
+  } catch (error) {
+    const message = getErrorMessage(error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Endpoint para retornar o conteúdo de um campo customizado para o evento em execução.
+ * Rota: GET /next/custom-data/:customField
+ */
+export async function getNextCustomField(req: Request, res: Response): Promise<void> {
+  try {
+    const { customField } = req.params;
+
+    // Obtém o evento atualmente em execução (eventNow)
+    const playingEvent = getPlayingEvent();
+    if (!playingEvent) {
+      res.status(404).json({ message: 'No playing event found' });
+      return;
+    }
+    const nextEvent = findNext(playingEvent.id);
+    if (!nextEvent) {
+      res.status(404).json({ message: 'No next event found' });
+      return;
+    }
+
+    // Verifica se o evento possui dados customizados
+    const customData = nextEvent.custom;
+    if (!customData || !(customField in customData)) {
+      res.status(404).json({
+        message: `Custom field "${customField}" not found`,
+      });
+      return;
+    }
+
+    // Retorna somente o conteúdo do campo customizado
+    res.json({ value: customData[customField] });
+  } catch (error) {
+    const message = getErrorMessage(error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Endpoint para retornar o conteúdo de um campo customizado para o evento em execução.
+ * Rota: GET /before/custom-data/:customField
+ */
+export async function getPreviousCustomField(req: Request, res: Response): Promise<void> {
+  try {
+    const { customField } = req.params;
+
+    // Obtém o evento atualmente em execução (eventNow)
+    const playingEvent = getPlayingEvent();
+    if (!playingEvent) {
+      res.status(404).json({ message: 'No playing event found' });
+      return;
+    }
+    const previousEvent = findPrevious(playingEvent.id);
+    if (!previousEvent) {
+      res.status(404).json({ message: 'No previous event found' });
+      return;
+    }
+
+    // Verifica se o evento possui dados customizados
+    const customData = previousEvent.custom;
+    if (!customData || !(customField in customData)) {
+      res.status(404).json({
+        message: `Custom field "${customField}" not found`,
+      });
+      return;
+    }
+
+    // Retorna somente o conteúdo do campo customizado
+    res.json({ value: customData[customField] });
+  } catch (error) {
+    const message = getErrorMessage(error);
+    res.status(500).json({ message });
+  }
+}
+
+/**
+ * Endpoint para retornar o conteúdo de um campo customizado para o evento em execução.
+ * Rota: GET /prompter
+ */
+export async function getPrompter(req: Request, res: Response): Promise<void> {
+  try {
+    const customField = "header";
+
+    // Obtém o evento atualmente em execução (eventNow)
+    const playingEvent = getPlayingEvent();
+    if (!playingEvent) {
+      res.status(404).send('No playing event found');
+      return;
+    }
+
+    // Verifica se o evento possui dados customizados
+    const customData = playingEvent.custom;
+    if (!customData || !(customField in customData)) {
+      res.status(404).send(`Create custom field "header" to show the content.`);
+      return;
+    }
+
+    let prompter = customData[customField];
+
+    const nextEvent = findNext(playingEvent.id);
+    if (nextEvent) {
+      // Verifica se o evento possui dados customizados
+      const customData = nextEvent.custom;
+      if (customData || (customField in customData)) {
+        prompter += customData[customField];
+      }
+
+    }
+
+    // Retorna o conteúdo dos campos header do evento em execução e o proximo evento
+    res.send(prompter);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    res.status(500).send(message);
+  }
+}
 
 export async function rundownGetAll(_req: Request, res: Response<OntimeRundown>) {
   const rundown = getRundown();
